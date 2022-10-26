@@ -1,5 +1,5 @@
 import database
-from connection_pool import pool
+from connection_pool import get_connection
 
 
 class Option:
@@ -12,26 +12,22 @@ class Option:
         return f"Option({self.text!r}, {self.poll_id!r}, {self.id!r})"
 
     def save(self):
-        connection = pool.get_conn()
-        new_option_id = database.add_option(connection, self.text, self.poll_id)
-        pool.putconn(connection)
-        self.id = new_option_id
+        with get_connection() as connection:
+            new_option_id = database.add_option(connection, self.text, self.poll_id)
+            self.id = new_option_id
 
     @classmethod
     def get(cls, option_id: int) -> "Option":
-        connection = pool.get_conn()
-        option = database.get_option(connection, option_id)
-        pool.putconn(connection)
-        return cls(option[1], option[2], option[0])
+        with get_connection() as connection:
+            option = database.get_option(connection, option_id)
+            return cls(option[1], option[2], option[0])
 
     def vote(self, username: str):
-        connection = pool.get_conn()
-        database.add_poll_vote(connection, username, self.id)
-        pool.putconn(connection)
+        with get_connection() as connection:
+            database.add_poll_vote(connection, username, self.id)
 
     @property
     def votes(self) -> list[database.Vote]:
-        connection = pool.get_conn()
-        votes = database.get_votes_for_option(connection, self.id)
-        pool.putconn(connection)
-        return votes
+        with get_connection() as connection:
+            votes = database.get_votes_for_option(connection, self.id)
+            return votes
